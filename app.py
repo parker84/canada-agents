@@ -15,7 +15,7 @@ DEBUG_MODE = True
 st.set_page_config(
     page_title="Canadian Agents",
     page_icon="🇨🇦",
-    layout="centered"
+    layout="wide"
 )
 
 # Initialize session state for chat history
@@ -25,6 +25,7 @@ if "messages" not in st.session_state:
 canadian_shopify_businesses_knowledge_base = CSVKnowledgeBase(
     path="data/shop_canada_data.csv", # from here: https://github.com/parker84/shop-canada
     vector_db=ChromaDb(collection="canadian_shopify_businesses"),
+    num_documents=10,  # Number of documents to return on search
 )
 
 @st.cache_resource
@@ -48,6 +49,8 @@ def get_agent_team():
         markdown=True,
         debug_mode=DEBUG_MODE,
     )
+
+    # TODO: browser control tool
 
     news_agent = Agent(
         name="Canadian Business News",
@@ -77,13 +80,16 @@ def get_agent_team():
         search_knowledge=True,
         # tools=[DuckDuckGoTools()], # comment out to use explicitly use knowledge base
         instructions=[
-            "Focus on finding Canadian Shopify businesses",
-            "Include business location and contact information when available",
-            "Highlight unique Canadian aspects of the businesses",
-            "Always include sources (and link out to them)",
-            "Use the knowledge base to find relevant businesses",
-            "When possible, reference businesses from the knowledge base"
+            "Focus on finding Canadian Shopify businesses from the knowledge base",
+            "Only use the knowledge base to find relevant businesses and data",
+            "Do not include any other businesses in your output that are not in the knowledge base",
+            "Always include links out to the shopify stores and the shop app page",
+            "Always include a description of each business and the unique Canadian aspect of the businesses",
+            "Always rank businesses on your output lists by volume of ratings in the knowledge base",
+            "Always include volume of ratings and average rating in your output table",
+            "Do not include any other businesses in your output that are not in the knowledge base"
         ],
+        debug_mode=DEBUG_MODE,
     )
     shopify_finder_agent.knowledge.load(recreate=False)
 
