@@ -3,6 +3,8 @@ from agno.agent import Agent
 from agno.models.openai import OpenAIChat
 from typing import Iterator
 from agno.storage.sqlite import SqliteStorage
+from agno.knowledge.csv import CSVKnowledgeBase
+from agno.vectordb.chroma import ChromaDb
 from agno.run.response import RunResponse
 from agno.tools.duckduckgo import DuckDuckGoTools
 from agno.tools.yfinance import YFinanceTools
@@ -20,6 +22,10 @@ st.set_page_config(
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+canadian_shopify_businesses_knowledge_base = CSVKnowledgeBase(
+    path="data/shop_canada_data.csv", # from here: https://github.com/parker84/shop-canada
+    vector_db=ChromaDb(collection="canadian_shopify_businesses"),
+)
 
 @st.cache_resource
 def get_agent_team():
@@ -63,6 +69,24 @@ def get_agent_team():
         debug_mode=DEBUG_MODE,
     )
 
+    shopify_finder_agent = Agent(
+        name="Shopify Business Finder",
+        role="Find and recommend Canadian Shopify businesses",
+        model=OpenAIChat(id="gpt-4o-mini"),
+        knowledge=canadian_shopify_businesses_knowledge_base,
+        search_knowledge=True,
+        # tools=[DuckDuckGoTools()], # comment out to use explicitly use knowledge base
+        instructions=[
+            "Focus on finding Canadian Shopify businesses",
+            "Include business location and contact information when available",
+            "Highlight unique Canadian aspects of the businesses",
+            "Always include sources (and link out to them)",
+            "Use the knowledge base to find relevant businesses",
+            "When possible, reference businesses from the knowledge base"
+        ],
+    )
+    shopify_finder_agent.knowledge.load(recreate=False)
+
     support_agent = Agent(
         name="Canadian Business Support",
         role="Provide information about supporting Canadian businesses",
@@ -104,7 +128,7 @@ def get_agent_team():
     agent_storage: str = "tmp/agents.db"
 
     agent_team = Agent(
-        team=[business_finder_agent, news_agent, support_agent, analysis_agent],
+        team=[business_finder_agent, news_agent, support_agent, analysis_agent, shopify_finder_agent],
         model=OpenAIChat(id="gpt-4o-mini"),
         instructions=[
             "Focus on supporting and promoting Canadian businesses",
