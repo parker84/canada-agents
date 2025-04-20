@@ -8,6 +8,7 @@ from agno.vectordb.chroma import ChromaDb
 from agno.run.response import RunResponse
 from agno.tools.duckduckgo import DuckDuckGoTools
 from agno.tools.yfinance import YFinanceTools
+from agno.document.chunking.agentic import AgenticChunking
 
 DEBUG_MODE = True
 
@@ -22,10 +23,12 @@ st.set_page_config(
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+
 canadian_shopify_businesses_knowledge_base = CSVKnowledgeBase(
     path="data/shop_canada_data.csv", # from here: https://github.com/parker84/shop-canada
     vector_db=ChromaDb(collection="canadian_shopify_businesses"),
     num_documents=10,  # Number of documents to return on search
+    chunking_strategy=AgenticChunking(), # agentic chunking: https://docs.agno.com/chunking/agentic-chunking
 )
 
 @st.cache_resource
@@ -51,6 +54,8 @@ def get_agent_team():
     )
 
     # TODO: browser control tool
+    # TODO: reasoning tools / models
+    # TODO: scraping tools
 
     news_agent = Agent(
         name="Canadian Business News",
