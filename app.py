@@ -5,6 +5,7 @@ from typing import Iterator
 from agno.storage.sqlite import SqliteStorage
 from agno.tools.browserbase import BrowserbaseTools
 from agno.knowledge.csv import CSVKnowledgeBase
+from agno.tools.reasoning import ReasoningTools
 from agno.vectordb.chroma import ChromaDb
 from agno.run.response import RunResponse
 from agno.tools.duckduckgo import DuckDuckGoTools
@@ -54,7 +55,6 @@ def get_agent_team():
         debug_mode=DEBUG_MODE,
     )
 
-    # TODO: browser control tool
     # TODO: reasoning tools / models
     # TODO: scraping tools
 
@@ -119,6 +119,24 @@ def get_agent_team():
         debug_mode=DEBUG_MODE,
     )
 
+    reasoning_agent = Agent(
+        name="Reasoning Agent",
+        role="Reasoning Agent",
+        model=OpenAIChat(id="gpt-4o-mini"),
+        tools=[
+            ReasoningTools(
+                think=True,
+                analyze=True,
+                add_instructions=True,
+                add_few_shot=True,
+            ),
+        ],
+        show_tool_calls=True,
+        add_datetime_to_instructions=True,
+        markdown=True,
+        debug_mode=DEBUG_MODE,
+    )
+
     support_agent = Agent(
         name="Canadian Business Support",
         role="Provide information about supporting Canadian businesses",
@@ -133,6 +151,7 @@ def get_agent_team():
             "Explain government support programs",
         ],
         show_tool_calls=True,
+        add_datetime_to_instructions=True,
         markdown=True,
         debug_mode=DEBUG_MODE,
     )
@@ -160,7 +179,10 @@ def get_agent_team():
     agent_storage: str = "tmp/agents.db"
 
     agent_team = Agent(
-        team=[business_finder_agent, news_agent, support_agent, analysis_agent, shopify_finder_agent, browser_agent],
+        team=[
+            business_finder_agent, news_agent, support_agent, analysis_agent, 
+            shopify_finder_agent, browser_agent, reasoning_agent
+        ],
         model=OpenAIChat(id="gpt-4o-mini"),
         instructions=[
             "Focus on supporting and promoting Canadian businesses",
