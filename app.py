@@ -3,6 +3,7 @@ from agno.agent import Agent
 from agno.models.openai import OpenAIChat
 from typing import Iterator
 from agno.storage.sqlite import SqliteStorage
+from agno.tools.browserbase import BrowserbaseTools
 from agno.knowledge.csv import CSVKnowledgeBase
 from agno.vectordb.chroma import ChromaDb
 from agno.run.response import RunResponse
@@ -94,9 +95,29 @@ def get_agent_team():
             "Always include volume of ratings and average rating in your output table",
             "Do not include any other businesses in your output that are not in the knowledge base"
         ],
+        show_tool_calls=True,
+        add_datetime_to_instructions=True,
+        markdown=True,
         debug_mode=DEBUG_MODE,
     )
     shopify_finder_agent.knowledge.load(recreate=False)
+
+    browser_agent = Agent(
+        name="Web Automation Assistant",
+        tools=[BrowserbaseTools()],
+        instructions=[
+            "You are a web automation assistant that can help with:",
+            "1. Capturing screenshots of websites",
+            "2. Extracting content from web pages",
+            "3. Monitoring website changes",
+            "4. Taking visual snapshots of responsive layouts",
+            "5. Automated web testing and verification",
+        ],
+        show_tool_calls=True,
+        add_datetime_to_instructions=True,
+        markdown=True,
+        debug_mode=DEBUG_MODE,
+    )
 
     support_agent = Agent(
         name="Canadian Business Support",
@@ -139,7 +160,7 @@ def get_agent_team():
     agent_storage: str = "tmp/agents.db"
 
     agent_team = Agent(
-        team=[business_finder_agent, news_agent, support_agent, analysis_agent, shopify_finder_agent],
+        team=[business_finder_agent, news_agent, support_agent, analysis_agent, shopify_finder_agent, browser_agent],
         model=OpenAIChat(id="gpt-4o-mini"),
         instructions=[
             "Focus on supporting and promoting Canadian businesses",
