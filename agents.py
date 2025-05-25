@@ -8,6 +8,8 @@ from agno.vectordb.chroma import ChromaDb
 from agno.team.team import Team
 from agno.tools.duckduckgo import DuckDuckGoTools
 from agno.tools.yfinance import YFinanceTools
+from agno.memory.v2.db.sqlite import SqliteMemoryDb
+from agno.memory.v2.memory import Memory
 import os
 
 DEBUG_MODE = os.getenv("DEBUG_MODE", "True").lower() == "true"
@@ -156,17 +158,23 @@ def get_agent_team():
         debug_mode=DEBUG_MODE,
     )
 
-    agent_storage: str = "tmp/agents.db"
+    # Database file for memory and storage
+    db_file = "tmp/agent.db"
+
+    # Initialize memory.v2
+    memory = Memory(
+        # Use any model for creating memories
+        model=OpenAIChat(id="gpt-4o-mini"),
+        db=SqliteMemoryDb(table_name="user_memories", db_file=db_file),
+    )
 
     agent_team = Team(
         name="Canadian Business Agent Team",
         description="A team of agents that can help you find and support Canadian businesses",
-        mode='route',
-        enable_agentic_context=True,  # Allow the agent to maintain a shared context and send that to members.
-        share_member_interactions=True,  # Share all member responses with subsequent member requests.
         members=[
-            search_agent, business_finder_agent, news_agent, support_agent, analysis_agent, 
-            shopify_finder_agent, reasoning_agent
+            # search_agent, business_finder_agent, news_agent, support_agent, analysis_agent, 
+            # shopify_finder_agent, reasoning_agent
+            search_agent
         ],
         model=OpenAIChat(id="gpt-4o-mini"),
         instructions=[
@@ -180,9 +188,23 @@ def get_agent_team():
         ],
         show_tool_calls=True,
         debug_mode=DEBUG_MODE,
-        storage=SqliteStorage(table_name="canadian_business_agent", db_file=agent_storage),
         add_datetime_to_instructions=True,
         markdown=True,
         show_members_responses=True,
+        # ----------memory----------
+        # adding previous 5 questions and answers to the prompt
+        # read more here: https://docs.agno.com/memory/introduction
+        storage=SqliteStorage(table_name="agent_sessions", db_file=db_file),
+        enable_team_history=True,
+        num_history_runs=5,
+        # adding agentic memory: "With Agentic Memory, The Agent itself creates, updates and deletes memories from user conversations."
+        # read more here: https://docs.agno.com/memory/memory
+        enable_agentic_memory=True,
+        memory=memory,
     )
     return agent_team
+
+
+# I'm a vegetarian
+# top restaurants in toronto
+

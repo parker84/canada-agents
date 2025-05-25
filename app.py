@@ -49,6 +49,7 @@ if prompt := st.chat_input("How can I help you support Canadian businesses?"):
                 prompt, 
                 stream=True, 
                 auto_invoke_tools=True,
+                user_id="ava",
             )
             response = st.write_stream(parse_stream(stream))
 
