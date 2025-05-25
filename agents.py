@@ -5,11 +5,12 @@ from agno.storage.sqlite import SqliteStorage
 from agno.knowledge.csv import CSVKnowledgeBase
 from agno.tools.reasoning import ReasoningTools
 from agno.vectordb.chroma import ChromaDb
+from agno.team.team import Team
 from agno.tools.duckduckgo import DuckDuckGoTools
 from agno.tools.yfinance import YFinanceTools
 import os
 
-DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
+DEBUG_MODE = os.getenv("DEBUG_MODE", "True").lower() == "true"
 
 canadian_shopify_businesses_knowledge_base = CSVKnowledgeBase(
     path="data/shop_canada_data.csv", # from here: https://github.com/parker84/shop-canada
@@ -20,6 +21,20 @@ canadian_shopify_businesses_knowledge_base = CSVKnowledgeBase(
 
 @st.cache_resource
 def get_agent_team():
+    search_agent = Agent(
+        name="Search Agent",
+        role="Search the web for information",
+        model=OpenAIChat(id="gpt-4o-mini"),
+        tools=[DuckDuckGoTools()],
+        instructions=[
+            "Search the web for information",
+            "Include sources (and link out to them)",
+            "Always include sources (and link out to them)",
+            "But don't just include the sources, pull out the relevant information from the sources"
+        ],
+        show_tool_calls=True,
+    )
+
     business_finder_agent = Agent(
         name="Canadian Business Finder",
         role="Find and recommend Canadian businesses",
@@ -143,9 +158,14 @@ def get_agent_team():
 
     agent_storage: str = "tmp/agents.db"
 
-    agent_team = Agent(
-        team=[
-            business_finder_agent, news_agent, support_agent, analysis_agent, 
+    agent_team = Team(
+        name="Canadian Business Agent Team",
+        description="A team of agents that can help you find and support Canadian businesses",
+        mode='route',
+        enable_agentic_context=True,  # Allow the agent to maintain a shared context and send that to members.
+        share_member_interactions=True,  # Share all member responses with subsequent member requests.
+        members=[
+            search_agent, business_finder_agent, news_agent, support_agent, analysis_agent, 
             shopify_finder_agent, reasoning_agent
         ],
         model=OpenAIChat(id="gpt-4o-mini"),
@@ -162,8 +182,7 @@ def get_agent_team():
         debug_mode=DEBUG_MODE,
         storage=SqliteStorage(table_name="canadian_business_agent", db_file=agent_storage),
         add_datetime_to_instructions=True,
-        add_history_to_messages=True,
-        num_history_responses=5,
         markdown=True,
+        show_members_responses=True,
     )
     return agent_team
